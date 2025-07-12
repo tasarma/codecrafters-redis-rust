@@ -1,6 +1,6 @@
 pub mod codec;
-pub mod parsers;
+pub(crate) mod parsers;
 pub mod types;
 
-pub use parsers::RespParser;
+pub use codec::RespParser;
 pub use types::{RESPError, RESPValueRef};

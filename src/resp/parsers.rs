@@ -1,5 +1,4 @@
 use std::str::from_utf8;
-use tokio_util::codec::Decoder;
 
 use bytes::{Bytes, BytesMut};
 use memchr::memchr;
@@ -79,7 +78,7 @@ pub fn bulk_string(buf: &BytesMut, cursor: usize) -> RESPResult {
     }
 }
 
-fn parse(buf: &BytesMut, cursor: usize) -> RESPResult {
+pub fn parse(buf: &BytesMut, cursor: usize) -> RESPResult {
     if buf.is_empty() || cursor >= buf.len() {
         return Ok(None);
     }
@@ -115,32 +114,5 @@ pub fn array(buf: &BytesMut, cursor: usize) -> RESPResult {
             Ok(Some((currsor_pos, RESPBufSplit::Array(values))))
         }
         Some((_cursor, bad_num_elements)) => Err(RESPError::BadArraySize(bad_num_elements)),
-    }
-}
-
-#[derive(Default)]
-pub struct RespParser;
-
-impl Decoder for RespParser {
-    type Item = RESPValueRef;
-    type Error = RESPError;
-
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        if src.is_empty() {
-            return Ok(None);
-        }
-
-        match parse(src, 0)? {
-            Some((pos, value)) => {
-                // We parsed a value! Shave off the bytes so tokio can continue filling the buffer.
-                let our_data: BytesMut = src.split_to(pos);
-                // Convert BytesMut into Bytes
-                let data: Bytes = our_data.freeze();
-                // Use `into_redis_value` to get the correct type
-                let value = value.into_redis_value(&data);
-                Ok(Some(value))
-            }
-            None => Ok(None),
-        }
     }
 }

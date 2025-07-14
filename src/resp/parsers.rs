@@ -38,6 +38,7 @@ pub fn error(buf: &BytesMut, cursor: usize) -> RESPResult {
     Ok(word(buf, cursor).map(|(next_cursor, split)| (next_cursor, RESPBufSplit::Error(split))))
 }
 
+// Int (:...)
 fn int(buf: &BytesMut, cursor: usize) -> Result<Option<(usize, i64)>, RESPError> {
     match word(buf, cursor) {
         Some((next_cursor, split)) => {
@@ -55,6 +56,7 @@ pub fn resp_int(buf: &BytesMut, cursor: usize) -> RESPResult {
     Ok(int(buf, cursor)?.map(|(next_cursor, num)| (next_cursor, RESPBufSplit::Int(num))))
 }
 
+// Bulkstring($...)
 pub fn bulk_string(buf: &BytesMut, cursor: usize) -> RESPResult {
     match int(buf, cursor)? {
         // redis defines a NullBulkString type, with length of -1.
@@ -68,7 +70,7 @@ pub fn bulk_string(buf: &BytesMut, cursor: usize) -> RESPResult {
                 // total_size + 2 == ...bulkstring\r\n<HERE> -- after CLRF
                 Ok(Some((
                     total_size + 2,
-                    RESPBufSplit::String(BufSplit(next_cursor, total_size)),
+                    RESPBufSplit::BulkString(BufSplit(next_cursor, total_size)),
                 )))
             }
         }

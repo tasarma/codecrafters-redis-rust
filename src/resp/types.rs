@@ -19,6 +19,7 @@ pub enum RESPBufSplit {
     Error(BufSplit),
     Int(i64),
     Array(Vec<RESPBufSplit>),
+    BulkString(BufSplit),
     NullArray,
     NullBulkString,
 }
@@ -29,6 +30,7 @@ impl RESPBufSplit {
             RESPBufSplit::String(bfs) => RESPValueRef::SimpleString(bfs.as_bytes(buf)),
             RESPBufSplit::Error(bfs) => RESPValueRef::Error(bfs.as_bytes(buf)),
             RESPBufSplit::Int(i) => RESPValueRef::Int(i),
+            RESPBufSplit::BulkString(bfs) => RESPValueRef::BulkString(bfs.as_bytes(buf)),
             RESPBufSplit::NullBulkString => RESPValueRef::NullBulkString,
             RESPBufSplit::Array(arr) => RESPValueRef::Array(
                 arr.into_iter()

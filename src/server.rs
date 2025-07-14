@@ -1,5 +1,9 @@
 #![allow(unused_imports)]
-use crate::resp::{RESPError, RESPValueRef, RespParser};
+use crate::{
+    commands::RedisCommand,
+    resp::{RESPError, RESPValueRef, RespParser},
+};
+
 use bytes::Bytes;
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use std::error::Error;
@@ -28,22 +32,19 @@ async fn handle_client(mut socket: TcpStream) {
     let framed = Framed::new(socket, RespParser::default());
     let (mut writer, mut reader) = framed.split();
 
-    while let Some(result) = reader.next().await {
-        match result {
-            Ok(value) => {
-                println!("Received: {:?}", value);
+    while let Some(Ok(value)) = reader.next().await {
+        println!("Received: {:?}", value);
 
-                // Echo back a "+OK\r\n" simple string response
-                let response = RESPValueRef::SimpleString(Bytes::from_static(b"OK"));
-
-                if let Err(e) = writer.send(response).await {
-                    eprintln!("Failed to send response: {}", e);
-                    break;
+        match RedisCommand::from_resp_array(&value) {
+            Ok(command) => {
+                if let Ok(response) = command.execute() {
+                    let _ = writer.send(response).await;
                 }
             }
             Err(e) => {
-                eprintln!("Parse error: {}", e);
-                break;
+                let _ = writer
+                    .send(RESPValueRef::Error(Bytes::from(format!("ERR {}", e))))
+                    .await;
             }
         }
     }

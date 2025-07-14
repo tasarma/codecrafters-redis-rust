@@ -1,6 +1,8 @@
 #![allow(unused_imports)]
+mod commands;
 mod resp;
 mod server;
+
 use server::start_server;
 
 #[tokio::main]

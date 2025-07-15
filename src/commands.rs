@@ -10,6 +10,7 @@ pub enum RedisCommand {
     Ping,
     Echo(Bytes),
     Set(Bytes, Bytes),
+    Get(Bytes),
     Unknown(String),
 }
 
@@ -56,7 +57,17 @@ impl RedisCommand {
                     Err("SET key and value must be bulk strings".to_string())
                 }
             }
-            //"get" => {}
+            "get" => {
+                if elements.len() < 2 {
+                    return Err("Missing argument for GET".to_string());
+                }
+
+                if let RESPValueRef::BulkString(key) = &elements[1] {
+                    Ok(RedisCommand::Get(key.clone()))
+                } else {
+                    Err("GET key must be bulk strings".to_string())
+                }
+            }
             unknown => Ok(RedisCommand::Unknown(unknown.to_string())),
         }
     }
@@ -68,6 +79,13 @@ impl RedisCommand {
             RedisCommand::Set(key, value) => {
                 store.lock().unwrap().insert(key.clone(), value.clone());
                 Ok(RESPValueRef::SimpleString(Bytes::from_static(b"OK")))
+            }
+            RedisCommand::Get(key) => {
+                let store = store.lock().unwrap();
+                match store.get(key) {
+                    Some(value) => Ok(RESPValueRef::BulkString(value.clone())),
+                    None => Ok(RESPValueRef::NullBulkString),
+                }
             }
             RedisCommand::Unknown(cmd) => {
                 let msg = format!("ERR unknown command '{}'", cmd);

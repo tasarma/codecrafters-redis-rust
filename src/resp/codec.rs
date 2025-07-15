@@ -18,11 +18,12 @@ impl Decoder for RespParser {
 
         match parse(src, 0)? {
             Some((pos, value)) => {
-                // We parsed a value! Shave off the bytes so tokio can continue filling the buffer.
+                // split_to(pos) gives you the first pos bytes and removes them from src.
+                // This allows the remaining buffer (src) to be used for future parsing.
                 let our_data: BytesMut = src.split_to(pos);
                 // Convert BytesMut into Bytes
                 let data: Bytes = our_data.freeze();
-                // Use `into_redis_value` to get the correct type
+                // Use `into_redis_value` to transforms these slices into actual usable RESPValueRef types
                 let value = value.into_redis_value(&data);
                 Ok(Some(value))
             }

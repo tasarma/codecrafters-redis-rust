@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use crate::{
-    commands::RedisCommand,
+    commands::{RedisCommand, StoredValue},
     resp::{RESPError, RESPValueRef, RespParser},
 };
 
@@ -21,7 +21,7 @@ use tokio_util::codec::{Decoder, Framed};
 
 const BIND_ADDRESS: &str = "127.0.0.1:6379";
 
-type Store = Arc<Mutex<HashMap<bytes::Bytes, bytes::Bytes>>>;
+type Store = Arc<Mutex<HashMap<Bytes, Bytes>>>;
 
 pub async fn start_server() -> Result<(), Box<dyn Error>> {
     let listener = TcpListener::bind(BIND_ADDRESS).await?;
@@ -45,7 +45,7 @@ async fn handle_client(socket: TcpStream, store: Store) {
     while let Some(Ok(value)) = reader.next().await {
         println!("Received: {:?}", value);
 
-        match RedisCommand::from_resp_array(&value, store.clone()) {
+        match RedisCommand::resp_to_command(&value, store.clone()) {
             Ok(command) => {
                 if let Ok(response) = command.execute(&store) {
                     let _ = writer.send(response).await;
